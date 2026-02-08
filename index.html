@@ -149,43 +149,6 @@
                 font-size: 14px;
                 margin-bottom: 20px;
             }
-
-            /* --- LÓGICA DE CAPA DE DOCUMENTOS (MODAL) NA IMPRESSÃO --- */
-            /* Se o corpo tiver a classe 'printing-cover', esconde tudo menos a capa */
-            body.printing-cover > *:not(#cover-modal) {
-                display: none !important;
-            }
-
-            body.printing-cover #cover-modal {
-                display: block !important;
-                position: absolute !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                background: white !important;
-                z-index: 9999 !important;
-            }
-
-            body.printing-cover #cover-modal .fixed {
-                position: static !important;
-                padding: 0 !important;
-            }
-
-            body.printing-cover #cover-modal .bg-white {
-                box-shadow: none !important;
-                border: none !important;
-                max-width: 100% !important;
-                width: 100% !important;
-                margin: 0 !important;
-                border-radius: 0 !important;
-            }
-
-            body.printing-cover #cover-content {
-                padding: 0 !important;
-                width: 100% !important;
-                height: 100vh !important;
-            }
         }
 
         #print-header, #print-footer, #print-status-banner { display: none; }
@@ -249,11 +212,6 @@
                                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                 Novo
                             </button>
-                            <span class="text-slate-300 text-[10px]">|</span>
-                            <button onclick="openCoverModal()" class="text-[10px] font-black text-slate-600 uppercase tracking-widest hover:text-indigo-600 flex items-center gap-1 transition-colors">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                                Capa Doc
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -278,7 +236,7 @@
                 <div class="bg-white rounded-2xl shadow-sm p-6 border-l-4 border-indigo-600 border border-slate-100 no-print">
                     <h2 class="text-lg font-bold text-slate-800 mb-2">Instruções</h2>
                     <p class="text-slate-600 text-sm leading-relaxed">
-                        Preencha o checklist para validar a viagem. A averbação do seguro é obrigatória. Use o botão <strong>"Capa Doc"</strong> no menu para imprimir a folha de rosto dos documentos.
+                        Preencha o checklist para validar a viagem. A averbação do seguro é obrigatória.
                     </p>
                 </div>
 
@@ -577,98 +535,6 @@
         </div>
     </main>
 
-    <div id="cover-modal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm transition-opacity" onclick="closeCoverModal()"></div>
-
-        <div class="fixed inset-0 z-10 overflow-y-auto">
-            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                
-                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl border border-slate-200">
-                    
-                    <div class="bg-slate-50 px-4 py-3 flex justify-between items-center border-b border-slate-100 no-print">
-                        <h3 class="text-sm font-black text-slate-500 uppercase tracking-widest">Prévia da Capa</h3>
-                        <div class="flex gap-2">
-                            <button type="button" onclick="closeCoverModal()" class="rounded-lg bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50">Fechar</button>
-                            <button type="button" onclick="printCoverOnly()" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-500 flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4h10z"></path></svg>
-                                Imprimir Capa
-                            </button>
-                        </div>
-                    </div>
-
-                    <div id="cover-content" class="bg-white p-8 md:p-12 print-cover-reset">
-                        
-                        <div class="border-4 border-slate-900 p-8 h-full flex flex-col justify-between" style="min-height: 800px;">
-                            
-                            <div class="text-center space-y-4 border-b-2 border-slate-900 pb-8">
-                                <h1 class="text-4xl font-black uppercase tracking-tighter text-slate-900">Anexo de Documentos</h1>
-                                <p class="text-sm font-bold uppercase text-slate-500 tracking-[0.3em]">Controle de Remessa de Viagem</p>
-                            </div>
-
-                            <div class="grid grid-cols-1 gap-8 py-8">
-                                <div class="border p-4 rounded bg-slate-50">
-                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cliente / Destinatário</p>
-                                    <p id="cover-client" class="text-2xl font-bold text-slate-900 uppercase truncate">CLIENTE EXEMPLO LTDA</p>
-                                </div>
-                                
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="border p-4 rounded bg-slate-50">
-                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nº Processo</p>
-                                        <p id="cover-process" class="text-xl font-bold text-slate-900">-</p>
-                                    </div>
-                                    <div class="border p-4 rounded bg-slate-50">
-                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Data Emissão</p>
-                                        <p id="cover-date" class="text-xl font-bold text-slate-900">-</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="flex-grow py-4">
-                                <h4 class="text-xs font-black text-slate-900 uppercase border-b border-slate-300 pb-2 mb-4">Conteúdo do Envelope</h4>
-                                <ul class="space-y-4">
-                                    <li class="flex items-center gap-4">
-                                        <div class="w-6 h-6 border-2 border-slate-900 flex items-center justify-center font-bold" id="chk-cover-cte"></div>
-                                        <span class="text-lg font-bold uppercase">Conhecimento (CT-e/DACTE)</span>
-                                    </li>
-                                    <li class="flex items-center gap-4">
-                                        <div class="w-6 h-6 border-2 border-slate-900 flex items-center justify-center font-bold" id="chk-cover-mdfe"></div>
-                                        <span class="text-lg font-bold uppercase">Manifesto (MDF-e/DAMDFE)</span>
-                                    </li>
-                                    <li class="flex items-center gap-4">
-                                        <div class="w-6 h-6 border-2 border-slate-900 flex items-center justify-center font-bold" id="chk-cover-nfe"></div>
-                                        <span class="text-lg font-bold uppercase">Notas Fiscais (DANFEs)</span>
-                                    </li>
-                                    <li class="flex items-center gap-4">
-                                        <div class="w-6 h-6 border-2 border-slate-900 flex items-center justify-center font-bold" id="chk-cover-ciot"></div>
-                                        <span class="text-lg font-bold uppercase">Contrato / CIOT</span>
-                                    </li>
-                                    <li class="flex items-center gap-4 mt-6">
-                                        <div class="w-6 h-6 border-2 border-slate-300"></div>
-                                        <span class="text-lg font-medium text-slate-400 uppercase">Outros: __________________</span>
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-12 mt-auto pt-12 border-t-2 border-slate-900">
-                                <div class="text-center">
-                                    <p class="text-xs text-slate-400 mb-8">Declaro ter recebido os documentos acima.</p>
-                                    <div class="border-b border-slate-900 mb-2"></div>
-                                    <p class="text-xs font-black uppercase">Assinatura Motorista</p>
-                                </div>
-                                <div class="text-center">
-                                    <p class="text-xs text-slate-400 mb-8">Conferido e liberado por.</p>
-                                    <div class="border-b border-slate-900 mb-2"></div>
-                                    <p class="text-xs font-black uppercase">Assinatura Expedição</p>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                    </div>
-            </div>
-        </div>
-    </div>
-
     <script>
         let progressChartInstance = null;
         const STORAGE_KEY = 'agenciamento_autosave_v2';
@@ -874,39 +740,6 @@
             } catch (e) {
                 showToast("Erro ao tentar imprimir.", "error");
             }
-        }
-
-        // --- CAPA DE DOCUMENTOS ---
-        function openCoverModal() {
-            const client = document.getElementById('clientName').value || 'NÃO INFORMADO';
-            const process = document.getElementById('processNumber').value || '-';
-            
-            document.getElementById('cover-client').innerText = client;
-            document.getElementById('cover-process').innerText = process;
-            document.getElementById('cover-date').innerText = new Date().toLocaleDateString('pt-BR');
-
-            const setMark = (id, valid) => {
-                document.getElementById(id).innerText = valid ? 'X' : '';
-            };
-
-            setMark('chk-cover-cte', true);
-            setMark('chk-cover-mdfe', true);
-            setMark('chk-cover-nfe', true);
-            setMark('chk-cover-ciot', true);
-
-            document.getElementById('cover-modal').classList.remove('hidden');
-        }
-
-        function closeCoverModal() {
-            document.getElementById('cover-modal').classList.add('hidden');
-        }
-
-        function printCoverOnly() {
-            document.body.classList.add('printing-cover');
-            window.print();
-            setTimeout(() => {
-                document.body.classList.remove('printing-cover');
-            }, 500);
         }
 
         // --- OUTRAS FUNÇÕES ---
