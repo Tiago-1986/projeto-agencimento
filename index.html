@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controle: CHECK LIST PROCESSO DE COLETA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --brand-primary: #4f46e5;
+            --brand-success: #10b981;
+            --brand-warning: #f59e0b;
+            --brand-danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; 
+            color: #1e293b;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .glass-header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 220px;
+            margin: 0 auto;
+            height: 220px;
+        }
+
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .checklist-item {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        input[type="checkbox"] {
+            cursor: pointer;
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: var(--brand-primary);
+        }
+
+        input[type="date"], input[type="text"] {
+            outline: none;
+            border: 1px solid #e2e8f0;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        @keyframes pulse-subtle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+
+        .btn-ready {
+            animation: pulse-subtle 2s infinite ease-in-out;
+        }
+
+        #toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 100;
+        }
+
+        /* --- ESTILOS CRÍTICOS DE IMPRESSÃO --- */
+        @media print {
+            .no-print { display: none !important; }
+            
+            body { 
+                background: white; 
+                padding: 0; 
+                margin: 0; 
+                font-size: 11px; 
+                color: black !important;
+            }
+            
+            /* Layout de Grid para Impressão */
+            .lg\:col-span-2 { width: 100% !important; display: block !important; }
+            .grid { display: block !important; }
+            
+            /* Evita quebrar blocos ao meio */
+            section, .card-shadow, .checklist-group { 
+                page-break-inside: avoid; 
+                break-inside: avoid;
+                border: 1px solid #ccc !important;
+                box-shadow: none !important;
+                margin-bottom: 15px !important;
+            }
+
+            /* Cabeçalho e Rodapé de Impressão */
+            header, input:not(#cargoValue), button, .chart-container, #progress-text, #toast-container { display: none !important; }
+            .flex-grow { padding: 0 !important; margin: 0 !important; }
+            main { padding-top: 0 !important; }
+            
+            #print-header { display: block !important; }
+            #print-footer { display: block !important; margin-top: 40px; page-break-inside: avoid; }
+            .print-only { display: block !important; }
+            
+            /* TRUQUE: Substitui Checkbox por texto */
+            input[type="checkbox"] { 
+                appearance: none;
+                -webkit-appearance: none;
+                display: none; 
+            }
+            
+            input[type="checkbox"]:checked + span::before,
+            input[type="checkbox"]:checked + div span::before {
+                content: "[ OK ] ";
+                font-weight: 900;
+                color: black;
+                margin-right: 5px;
+            }
+
+            input[type="checkbox"]:not(:checked) + span::before,
+            input[type="checkbox"]:not(:checked) + div span::before {
+                content: "[   ] ";
+                color: #999;
+                margin-right: 5px;
+            }
+            
+            #cargoValue-display { display: inline !important; font-weight: bold; color: black; }
+            #mopp-validity-display { display: inline !important; font-weight: bold; color: black; }
+            
+            /* Status Banner na impressão (Força cor) */
+            #print-status-banner, .doc-bullet, #status-driver, #status-finance, #status-docs, #status-kit {
+                display: block !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                border: 2px solid black;
+                padding: 10px;
+                text-align: center;
+                font-weight: bold;
+                font-size: 14px;
+                margin-bottom: 20px;
+            }
+
+            /* --- LÓGICA DE CAPA DE DOCUMENTOS (MODAL) NA IMPRESSÃO --- */
+            /* Se o corpo tiver a classe 'printing-cover', esconde tudo menos a capa */
+            body.printing-cover > *:not(#cover-modal) {
+                display: none !important;
+            }
+
+            body.printing-cover #cover-modal {
+                display: block !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                background: white !important;
+                z-index: 9999 !important;
+            }
+
+            body.printing-cover #cover-modal .fixed {
+                position: static !important;
+                padding: 0 !important;
+            }
+
+            body.printing-cover #cover-modal .bg-white {
+                box-shadow: none !important;
+                border: none !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+            }
+
+            body.printing-cover #cover-content {
+                padding: 0 !important;
+                width: 100% !important;
+                height: 100vh !important;
+            }
+        }
+
+        #print-header, #print-footer, #print-status-banner { display: none; }
+        .print-only { display: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <div id="toast-container" class="space-y-2"></div>
+
+    <input type="file" id="fileInput" class="hidden" accept=".json" onchange="loadFromFile(this)">
+
+    <div id="print-header" class="p-8 pb-4">
+        <div class="flex justify-between items-start border-b-2 border-slate-900 pb-4 mb-4">
+            <div>
+                <h1 class="text-2xl font-black uppercase">Relatório de Liberação de Viagem</h1>
+                <p class="text-sm font-bold text-slate-500">Checklist Operacional de Segurança e Documentação</p>
+            </div>
+            <div class="text-right">
+                <p class="text-xs font-bold uppercase text-slate-400">Data de Emissão</p>
+                <p id="print-date" class="text-sm font-black underline"></p>
+            </div>
+        </div>
+        
+        <div id="print-status-banner">STATUS INDEFINIDO</div>
+
+        <div class="grid grid-cols-2 gap-4 mt-4 mb-6">
+            <div class="border p-3 rounded">
+                <p class="text-[10px] font-black uppercase text-slate-400">Cliente</p>
+                <p id="print-client" class="text-sm font-bold uppercase">-</p>
+            </div>
+            <div class="border p-3 rounded">
+                <p class="text-[10px] font-black uppercase text-slate-400">Nº do Processo</p>
+                <p id="print-process" class="text-sm font-bold uppercase">-</p>
+            </div>
+        </div>
+    </div>
+
+    <header class="glass-header shadow-sm border-b border-slate-200 sticky top-0 z-50 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-200">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-extrabold text-slate-900 tracking-tight leading-tight">Agenciamento de Cargas</h1>
+                        <div class="flex gap-2 mt-1">
+                            <button onclick="saveToFile()" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 flex items-center gap-1 transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                                Salvar
+                            </button>
+                            <span class="text-slate-300 text-[10px]">|</span>
+                            <button onclick="document.getElementById('fileInput').click()" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-800 flex items-center gap-1 transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-5-8l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                Abrir
+                            </button>
+                            <span class="text-slate-300 text-[10px]">|</span>
+                            <button onclick="clearDraft()" class="text-[10px] font-black text-rose-600 uppercase tracking-widest hover:text-rose-800 flex items-center gap-1 transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                Novo
+                            </button>
+                            <span class="text-slate-300 text-[10px]">|</span>
+                            <button onclick="openCoverModal()" class="text-[10px] font-black text-slate-600 uppercase tracking-widest hover:text-indigo-600 flex items-center gap-1 transition-colors">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                Capa Doc
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 flex-grow lg:flex-grow-0 lg:max-w-md">
+                    <input type="text" id="clientName" placeholder="Cliente" class="pl-3 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-full transition-all">
+                    <input type="text" id="processNumber" placeholder="Nº Processo" class="pl-3 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-full transition-all">
+                </div>
+                
+                 <button onclick="executePrint()" class="hidden lg:flex p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors" title="Imprimir Relatório">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-6">
+                
+                <div class="bg-white rounded-2xl shadow-sm p-6 border-l-4 border-indigo-600 border border-slate-100 no-print">
+                    <h2 class="text-lg font-bold text-slate-800 mb-2">Instruções</h2>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Preencha o checklist para validar a viagem. A averbação do seguro é obrigatória. Use o botão <strong>"Capa Doc"</strong> no menu para imprimir a folha de rosto dos documentos.
+                    </p>
+                </div>
+
+                <section class="bg-white rounded-2xl border border-slate-100 card-shadow overflow-hidden">
+                    <div class="bg-slate-50/50 p-5 border-b border-slate-100 flex justify-between items-center cursor-pointer hover:bg-slate-50 no-print" onclick="toggleSection('sec-driver')">
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-600 text-white font-bold text-sm">1</span>
+                            <h3 class="font-bold text-slate-800 tracking-tight uppercase text-xs sm:text-base">Motorista e Veículo</h3>
+                        </div>
+                        <span class="text-slate-400 no-print" id="icon-sec-driver">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                        </span>
+                    </div>
+                    <div id="sec-driver" class="p-6 space-y-6">
+                        <div class="space-y-4">
+                            <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Condutor</h4>
+                            <label class="flex items-start gap-4 checklist-item p-3 rounded-xl hover:bg-slate-50/50 cursor-pointer">
+                                <input type="checkbox" class="mt-1 track-check" data-category="driver">
+                                <div>
+                                    <span class="text-sm font-bold text-slate-700">CNH Válida (Cat C, D ou E)</span>
+                                    <p class="text-xs text-slate-400 mt-0.5 font-medium">Categoria C, D ou E. Verificar EAR.</p>
+                                </div>
+                            </label>
+                            <label class="flex items-start gap-4 checklist-item p-3 rounded-xl hover:bg-slate-50/50 cursor-pointer">
+                                <input type="checkbox" class="mt-1 track-check" data-category="driver">
+                                <span class="text-sm font-bold text-slate-700">Dados Pessoais (RG, CPF, Endereço atualizado)</span>
+                            </label>
+
+                            <div class="bg-rose-50 border border-rose-100 rounded-2xl p-4" id="tox-container">
+                                <label class="flex items-start gap-4 cursor-pointer">
+                                    <input type="checkbox" id="check-tox" class="mt-1 track-check" data-category="driver" onchange="checkCritical('tox')">
+                                    <div>
+                                        <span class="text-sm font-black text-rose-700 uppercase tracking-tight">Exame Toxicológico (Crítico)</span>
+                                        <p class="text-xs text-rose-600 font-medium mt-0.5 text-opacity-80">Deve estar VÁLIDO no app CDT/Renach.</p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div class="p-3 border-t border-dashed border-slate-100 mt-4">
+                                <div class="flex flex-wrap items-center gap-5">
+                                    <span class="text-sm font-bold text-slate-600">MOPP Necessário?</span>
+                                    <div class="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 no-print">
+                                        <button class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all" onclick="toggleMopp(false)" id="mopp-no">Não</button>
+                                        <button class="px-5 py-1.5 text-xs font-bold rounded-lg transition-all" onclick="toggleMopp(true)" id="mopp-yes">Sim</button>
+                                    </div>
+                                    <div id="mopp-date-container" class="hidden flex items-center gap-3">
+                                        <span class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Validade:</span>
+                                        <input type="date" id="mopp-validity" class="shadow-sm border-indigo-100 bg-indigo-50/30 no-print">
+                                        <span id="mopp-validity-display" class="print-only text-sm font-bold"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4 pt-4">
+                            <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Veículo e Reboque</h4>
+                            <label class="flex items-center gap-4 checklist-item p-3 rounded-xl hover:bg-slate-50 cursor-pointer">
+                                <input type="checkbox" class="track-check" data-category="driver">
+                                <span class="text-sm font-bold text-slate-700">CRLV / Licenciamento (Exercício Atual)</span>
+                            </label>
+                            <label class="flex items-center gap-4 checklist-item p-3 rounded-xl hover:bg-slate-50 cursor-pointer">
+                                <input type="checkbox" class="track-check" data-category="driver">
+                                <span class="text-sm font-bold text-slate-700">RNTRC Ativo e Placa Vinculada</span>
+                            </label>
+                            <label class="flex items-center gap-4 checklist-item p-3 rounded-xl hover:bg-slate-50 cursor-pointer">
+                                <input type="checkbox" class="track-check" data-category="driver">
+                                <span class="text-sm font-bold text-slate-700">Dados Técnicos (Tara, Capacidade, Renavam)</span>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white rounded-2xl border border-slate-100 card-shadow overflow-hidden">
+                    <div class="bg-slate-50/50 p-5 border-b border-slate-100 flex justify-between items-center cursor-pointer hover:bg-slate-50 no-print" onclick="toggleSection('sec-finance')">
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-600 text-white font-bold text-sm shadow-md">2</span>
+                            <h3 class="font-bold text-slate-800 tracking-tight uppercase text-xs sm:text-base">Financeiro & Risco</h3>
+                        </div>
+                        <span class="text-slate-400 no-print" id="icon-sec-finance">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                        </span>
+                    </div>
+                    <div id="sec-finance" class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b pb-1">Pagamento</h4>
+                                <label class="flex items-center gap-3 checklist-item p-2 hover:bg-indigo-50/50 rounded-lg cursor-pointer">
+                                    <input type="checkbox" class="track-check" data-category="finance">
+                                    <span class="text-sm font-semibold text-slate-700">Vínculo Proprietário / Condutor validado</span>
+                                </label>
+                                <label class="flex items-center gap-3 checklist-item p-2 hover:bg-indigo-50/50 rounded-lg cursor-pointer">
+                                    <input type="checkbox" class="track-check" data-category="finance">
+                                    <span class="text-sm font-semibold text-slate-700">Dados Bancários do Titular RNTRC</span>
+                                </label>
+                            </div>
+                            <div class="space-y-4">
+                                <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest border-b pb-1">Risco (GR)</h4>
+                                <label class="flex items-start gap-3 checklist-item p-3 border border-indigo-50 bg-indigo-50/30 rounded-xl cursor-pointer">
+                                    <input type="checkbox" id="check-risk" class="mt-1 track-check" data-category="finance" onchange="updateRiskStatus(this)">
+                                    <div>
+                                        <span class="text-sm font-bold text-indigo-900">Consulta Buonny/Pamcary</span>
+                                    </div>
+                                </label>
+                                <label class="flex items-start gap-3 checklist-item p-3 border border-indigo-50 bg-indigo-50/30 rounded-xl cursor-pointer">
+                                    <input type="checkbox" class="mt-1 track-check" data-category="finance">
+                                    <div>
+                                        <span class="text-sm font-bold text-indigo-900">Checklist Físico Realizado</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white rounded-2xl border border-slate-100 card-shadow overflow-hidden">
+                    <div class="bg-slate-50/50 p-5 border-b border-slate-100 flex justify-between items-center cursor-pointer hover:bg-slate-50 no-print" onclick="toggleSection('sec-docs')">
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-600 text-white font-bold text-sm shadow-md">3</span>
+                            <h3 class="font-bold text-slate-800 tracking-tight uppercase text-xs sm:text-base">Documentação</h3>
+                        </div>
+                        <span class="text-slate-400 no-print" id="icon-sec-docs">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                        </span>
+                    </div>
+                    <div id="sec-docs" class="p-8 space-y-6">
+                        <div class="relative space-y-1 ml-4 border-l-2 border-slate-100">
+                            <div class="relative pb-8 pl-8 group">
+                                <div class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-white border-4 border-slate-200 doc-bullet transition-all duration-300"></div>
+                                <div class="space-y-4">
+                                    <label class="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm cursor-pointer hover:border-indigo-300 transition-all group-hover:bg-slate-50">
+                                        <input type="checkbox" class="h-5 w-5 track-check" data-category="docs" onchange="highlightStep(this)">
+                                        <span class="text-sm font-bold text-slate-700">1. Importação de NF-e</span>
+                                    </label>
+                                    <div class="ml-4 flex items-center gap-4">
+                                        <span class="text-[11px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Valor Total Carga:</span>
+                                        <div class="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 shadow-inner max-w-[240px]">
+                                            <span class="text-sm font-black text-slate-400 select-none">R$</span>
+                                            <input type="text" id="cargoValue" placeholder="0,00" oninput="formatCargoValue(this)" class="w-full bg-transparent outline-none text-sm font-bold text-slate-700 no-print">
+                                            <span id="cargoValue-display" class="print-only text-sm font-bold text-slate-900"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="relative pb-8 pl-8 group">
+                                <div class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-white border-4 border-slate-200 doc-bullet transition-all duration-300"></div>
+                                <label class="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm cursor-pointer hover:border-indigo-300 transition-all group-hover:bg-slate-50">
+                                    <input type="checkbox" class="h-5 w-5 track-check" data-category="docs" onchange="highlightStep(this)">
+                                    <span class="text-sm font-bold text-slate-700">2. Emissão de CT-e Emitido e Autorizado</span>
+                                </label>
+                            </div>
+                            <div class="relative pb-8 pl-8 group">
+                                <div class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-white border-4 border-slate-200 doc-bullet transition-all duration-300"></div>
+                                <label class="flex items-center gap-4 p-4 bg-indigo-600 border border-indigo-600 rounded-2xl shadow-lg shadow-indigo-100 cursor-pointer transition-all hover:bg-indigo-700">
+                                    <input type="checkbox" id="check-insurance" class="h-5 w-5 accent-white track-check" data-category="docs" onchange="highlightStep(this); checkCritical('insurance')">
+                                    <span class="text-sm font-black text-white uppercase tracking-wider">3. Averbação de Seguro (RCTR-C)</span>
+                                </label>
+                            </div>
+                            <div class="relative pb-8 pl-8 group">
+                                <div class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-white border-4 border-slate-200 doc-bullet transition-all duration-300"></div>
+                                <label class="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm cursor-pointer hover:border-indigo-300 transition-all group-hover:bg-slate-50">
+                                    <input type="checkbox" class="h-5 w-5 track-check" data-category="docs" onchange="highlightStep(this)">
+                                    <span class="text-sm font-bold text-slate-700">4. MDF-e (Manifesto) Autorizado</span>
+                                </label>
+                            </div>
+                            <div class="relative pl-8 group">
+                                <div class="absolute -left-[9px] top-1.5 w-4 h-4 rounded-full bg-white border-4 border-slate-200 doc-bullet transition-all duration-300"></div>
+                                <label class="flex items-center gap-4 p-4 bg-white border border-slate-100 rounded-2xl shadow-sm cursor-pointer hover:border-indigo-300 transition-all group-hover:bg-slate-50">
+                                    <input type="checkbox" class="h-5 w-5 track-check" data-category="docs" onchange="highlightStep(this)">
+                                    <span class="text-sm font-bold text-slate-700">5. CIOT Gerado & Vinculado</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mt-8 pt-6 border-t border-slate-100 no-print">
+                            <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Anexos Digitais (Comprovantes)</h4>
+                            
+                            <div class="border-2 border-dashed border-slate-300 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:bg-slate-50 transition-colors cursor-pointer group" onclick="document.getElementById('file-upload').click()">
+                                <input type="file" id="file-upload" multiple class="hidden" onchange="handleFileUpload(this)">
+                                
+                                <div class="bg-indigo-50 p-3 rounded-full group-hover:bg-indigo-100 transition-colors mb-3">
+                                    <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                </div>
+                                <p class="text-sm font-bold text-slate-700">Clique para adicionar arquivos</p>
+                                <p class="text-xs text-slate-400 mt-1">PDF, JPG ou PNG (Apenas referência visual)</p>
+                            </div>
+
+                            <ul id="attachment-list" class="mt-4 space-y-2">
+                                </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="bg-white rounded-2xl border border-slate-100 card-shadow overflow-hidden mb-12">
+                    <div class="bg-slate-50/50 p-5 border-b border-slate-100 flex justify-between items-center cursor-pointer hover:bg-slate-50 no-print" onclick="toggleSection('sec-kit')">
+                        <div class="flex items-center gap-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-600 text-white font-bold text-sm shadow-md">4</span>
+                            <h3 class="font-bold text-slate-800 tracking-tight uppercase text-xs sm:text-base">Kit de Viagem (Entrega)</h3>
+                        </div>
+                        <span class="text-slate-400 no-print" id="icon-sec-kit">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg>
+                        </span>
+                    </div>
+                    <div id="sec-kit" class="p-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <label class="flex items-center gap-4 checklist-item p-4 border border-slate-50 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
+                                <input type="checkbox" class="track-check" data-category="kit">
+                                <span class="text-sm font-bold text-slate-700">DANFEs (Notas Fiscais)</span>
+                            </label>
+                            <label class="flex items-center gap-4 checklist-item p-4 border border-slate-50 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
+                                <input type="checkbox" class="track-check" data-category="kit">
+                                <span class="text-sm font-bold text-slate-700">DACTE (Conhecimento)</span>
+                            </label>
+                            <label class="flex items-center gap-4 checklist-item p-4 border border-slate-50 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
+                                <input type="checkbox" class="track-check" data-category="kit">
+                                <span class="text-sm font-bold text-slate-700">DAMDFE (Manifesto)</span>
+                            </label>
+                            <label class="flex items-center gap-4 checklist-item p-4 border border-slate-50 rounded-2xl cursor-pointer hover:bg-slate-50 transition-colors">
+                                <input type="checkbox" class="track-check" data-category="kit">
+                                <span class="text-sm font-bold text-slate-700">Contrato / CIOT Assinado</span>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+                
+                <div id="print-footer">
+                    <div class="grid grid-cols-2 gap-12 mt-12">
+                        <div class="text-center">
+                            <div class="border-b border-black mb-2"></div>
+                            <p class="text-xs font-bold uppercase">Operador Responsável</p>
+                            <p class="text-[10px] text-slate-500">Assinatura</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="border-b border-black mb-2"></div>
+                            <p class="text-xs font-bold uppercase">Conferente / Gerência</p>
+                            <p class="text-[10px] text-slate-500">Assinatura</p>
+                        </div>
+                    </div>
+                    <p class="text-[9px] text-slate-400 text-center mt-8 uppercase">Documento gerado eletronicamente em <span id="print-footer-date"></span></p>
+                </div>
+
+            </div>
+
+            <div class="lg:col-span-1 space-y-6 no-print">
+                <div class="bg-white rounded-3xl p-8 border border-slate-100 card-shadow sticky top-28">
+                    <h3 class="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-center mb-8">Progresso da contratação</h3>
+                    
+                    <div class="chart-container">
+                        <canvas id="progressChart"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span id="progress-text" class="text-5xl font-black text-slate-900 leading-none">0%</span>
+                            <span class="text-[10px] text-indigo-500 font-black uppercase tracking-widest mt-1">Ready</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-10 space-y-6">
+                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status da Operação</h4>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 transition-all">
+                                <div class="flex items-center gap-3">
+                                    <div id="dot-driver" class="w-2 h-2 rounded-full bg-slate-300"></div>
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">1. Motorista/Veículo</span>
+                                </div>
+                                <span id="status-driver" class="text-[9px] font-black px-3 py-1 rounded-full bg-slate-200 text-slate-500 uppercase">Pendente</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 transition-all">
+                                <div class="flex items-center gap-3">
+                                    <div id="dot-finance" class="w-2 h-2 rounded-full bg-slate-300"></div>
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">2. Financeiro/Risco</span>
+                                </div>
+                                <span id="status-finance" class="text-[9px] font-black px-3 py-1 rounded-full bg-slate-200 text-slate-500 uppercase">Pendente</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 transition-all">
+                                <div class="flex items-center gap-3">
+                                    <div id="dot-docs" class="w-2 h-2 rounded-full bg-slate-300"></div>
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">3. Emissão Doctos</span>
+                                </div>
+                                <span id="status-docs" class="text-[9px] font-black px-3 py-1 rounded-full bg-slate-200 text-slate-500 uppercase">Pendente</span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100 transition-all">
+                                <div class="flex items-center gap-3">
+                                    <div id="dot-kit" class="w-2 h-2 rounded-full bg-slate-300"></div>
+                                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">4. Kit Viagem</span>
+                                </div>
+                                <span id="status-kit" class="text-[9px] font-black px-3 py-1 rounded-full bg-slate-200 text-slate-500 uppercase">Pendente</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-10">
+                        <button id="btn-dispatch" disabled class="w-full py-5 rounded-2xl font-black text-sm text-white bg-slate-200 cursor-not-allowed transition-all uppercase tracking-widest shadow-lg border-b-4 border-slate-300 flex items-center justify-center gap-2">
+                            <span>Aguardando Validação...</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="cover-modal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="fixed inset-0 bg-slate-900/75 backdrop-blur-sm transition-opacity" onclick="closeCoverModal()"></div>
+
+        <div class="fixed inset-0 z-10 overflow-y-auto">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                
+                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-2xl border border-slate-200">
+                    
+                    <div class="bg-slate-50 px-4 py-3 flex justify-between items-center border-b border-slate-100 no-print">
+                        <h3 class="text-sm font-black text-slate-500 uppercase tracking-widest">Prévia da Capa</h3>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="closeCoverModal()" class="rounded-lg bg-white px-3 py-2 text-xs font-bold text-slate-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50">Fechar</button>
+                            <button type="button" onclick="printCoverOnly()" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white shadow-sm hover:bg-indigo-500 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4h10z"></path></svg>
+                                Imprimir Capa
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="cover-content" class="bg-white p-8 md:p-12 print-cover-reset">
+                        
+                        <div class="border-4 border-slate-900 p-8 h-full flex flex-col justify-between" style="min-height: 800px;">
+                            
+                            <div class="text-center space-y-4 border-b-2 border-slate-900 pb-8">
+                                <h1 class="text-4xl font-black uppercase tracking-tighter text-slate-900">Anexo de Documentos</h1>
+                                <p class="text-sm font-bold uppercase text-slate-500 tracking-[0.3em]">Controle de Remessa de Viagem</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 gap-8 py-8">
+                                <div class="border p-4 rounded bg-slate-50">
+                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cliente / Destinatário</p>
+                                    <p id="cover-client" class="text-2xl font-bold text-slate-900 uppercase truncate">CLIENTE EXEMPLO LTDA</p>
+                                </div>
+                                
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="border p-4 rounded bg-slate-50">
+                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nº Processo</p>
+                                        <p id="cover-process" class="text-xl font-bold text-slate-900">-</p>
+                                    </div>
+                                    <div class="border p-4 rounded bg-slate-50">
+                                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Data Emissão</p>
+                                        <p id="cover-date" class="text-xl font-bold text-slate-900">-</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex-grow py-4">
+                                <h4 class="text-xs font-black text-slate-900 uppercase border-b border-slate-300 pb-2 mb-4">Conteúdo do Envelope</h4>
+                                <ul class="space-y-4">
+                                    <li class="flex items-center gap-4">
+                                        <div class="w-6 h-6 border-2 border-slate-900 flex items-center justify-center font-bold" id="chk-cover-cte"></div>
+                                        <span class="text-lg font-bold uppercase">Conhecimento (CT-e/DACTE)</span>
+                                    </li>
+                                    <li class="flex items-center gap-4">
+                                        <div class="w-6 h-6 border-2 border-slate-900 flex items-center justify-center font-bold" id="chk-cover-mdfe"></div>
+                                        <span class="text-lg font-bold uppercase">Manifesto (MDF-e/DAMDFE)</span>
+                                    </li>
+                                    <li class="flex items-center gap-4">
+                                        <div class="w-6 h-6 border-2 border-slate-900 flex items-center justify-center font-bold" id="chk-cover-nfe"></div>
+                                        <span class="text-lg font-bold uppercase">Notas Fiscais (DANFEs)</span>
+                                    </li>
+                                    <li class="flex items-center gap-4">
+                                        <div class="w-6 h-6 border-2 border-slate-900 flex items-center justify-center font-bold" id="chk-cover-ciot"></div>
+                                        <span class="text-lg font-bold uppercase">Contrato / CIOT</span>
+                                    </li>
+                                    <li class="flex items-center gap-4 mt-6">
+                                        <div class="w-6 h-6 border-2 border-slate-300"></div>
+                                        <span class="text-lg font-medium text-slate-400 uppercase">Outros: __________________</span>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-12 mt-auto pt-12 border-t-2 border-slate-900">
+                                <div class="text-center">
+                                    <p class="text-xs text-slate-400 mb-8">Declaro ter recebido os documentos acima.</p>
+                                    <div class="border-b border-slate-900 mb-2"></div>
+                                    <p class="text-xs font-black uppercase">Assinatura Motorista</p>
+                                </div>
+                                <div class="text-center">
+                                    <p class="text-xs text-slate-400 mb-8">Conferido e liberado por.</p>
+                                    <div class="border-b border-slate-900 mb-2"></div>
+                                    <p class="text-xs font-black uppercase">Assinatura Expedição</p>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let progressChartInstance = null;
+        const STORAGE_KEY = 'agenciamento_autosave_v2';
+        let attachedFiles = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            setupListeners();
+            updateDate();
+            loadFromLocal();
+        });
+
+        const debounce = (func, wait) => {
+            let timeout;
+            return function(...args) {
+                const later = () => { clearTimeout(timeout); func(...args); };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        };
+
+        const saveToLocal = debounce(() => {
+            const data = {
+                client: document.getElementById('clientName').value,
+                process: document.getElementById('processNumber').value,
+                cargoValue: document.getElementById('cargoValue').value,
+                moppValidity: document.getElementById('mopp-validity').value,
+                moppActive: !document.getElementById('mopp-date-container').classList.contains('hidden'),
+                checks: Array.from(document.querySelectorAll('.track-check')).map(cb => cb.checked),
+                isToxValid: document.getElementById('check-tox').checked,
+                isInsured: document.getElementById('check-insurance').checked,
+                attachedFiles: attachedFiles // SALVA A LISTA DE ARQUIVOS
+            };
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) { console.error("Erro ao salvar", e); }
+        }, 800);
+
+        function loadFromLocal() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (!saved) { 
+                toggleMopp(false); 
+                return; 
+            }
+            
+            try {
+                const data = JSON.parse(saved);
+                document.getElementById('clientName').value = data.client || '';
+                document.getElementById('processNumber').value = data.process || '';
+                
+                const cargoEl = document.getElementById('cargoValue');
+                cargoEl.value = data.cargoValue || '';
+                document.getElementById('cargoValue-display').innerText = data.cargoValue || '';
+
+                document.getElementById('mopp-validity').value = data.moppValidity || '';
+                toggleMopp(data.moppActive);
+
+                const allChecks = document.querySelectorAll('.track-check');
+                if (data.checks) {
+                    data.checks.forEach((isChecked, index) => {
+                        if (allChecks[index]) {
+                            allChecks[index].checked = isChecked;
+                            if (allChecks[index].dataset.category === 'docs') highlightStep(allChecks[index]);
+                        }
+                    });
+                }
+                
+                // CARREGA ARQUIVOS
+                if (data.attachedFiles) {
+                    attachedFiles = data.attachedFiles;
+                    renderFileList();
+                } else {
+                    attachedFiles = [];
+                }
+
+                updateProgress();
+                checkCritical('tox');
+                checkCritical('insurance');
+                showToast("Dados recuperados da memória", "info");
+            } catch (e) { 
+                console.error("Erro ao carregar dados", e);
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        }
+
+        function clearDraft() {
+            if(confirm('Tem certeza? Isso apagará todos os dados preenchidos.')) {
+                localStorage.removeItem(STORAGE_KEY);
+                window.location.reload();
+            }
+        }
+
+        // --- LÓGICA DE UPLOAD E ARQUIVOS ---
+        function handleFileUpload(input) {
+            const files = Array.from(input.files);
+            if (files.length === 0) return;
+
+            files.forEach(file => {
+                const fileObj = {
+                    name: file.name,
+                    size: formatFileSize(file.size),
+                    type: file.name.split('.').pop().toLowerCase(),
+                    date: new Date().toLocaleDateString('pt-BR')
+                };
+                attachedFiles.push(fileObj);
+            });
+
+            renderFileList();
+            saveToLocal();
+            input.value = '';
+        }
+
+        function removeFile(index) {
+            if(confirm('Remover este anexo?')) {
+                attachedFiles.splice(index, 1);
+                renderFileList();
+                saveToLocal();
+            }
+        }
+
+        function renderFileList() {
+            const listEl = document.getElementById('attachment-list');
+            listEl.innerHTML = ''; 
+
+            attachedFiles.forEach((file, index) => {
+                const li = document.createElement('li');
+                li.className = "flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-indigo-300 transition-all";
+                
+                let iconColor = "text-slate-400";
+                let iconSvg = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>';
+                
+                if (['jpg', 'jpeg', 'png'].includes(file.type)) {
+                    iconColor = "text-emerald-500";
+                    iconSvg = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>';
+                } else if (file.type === 'pdf') {
+                    iconColor = "text-rose-500";
+                }
+
+                li.innerHTML = `
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="${iconColor} bg-slate-50 p-2 rounded-lg">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${iconSvg}</svg>
+                        </div>
+                        <div class="flex flex-col overflow-hidden">
+                            <span class="text-xs font-bold text-slate-700 truncate">${file.name}</span>
+                            <span class="text-[10px] text-slate-400">${file.size} • ${file.date}</span>
+                        </div>
+                    </div>
+                    <button onclick="removeFile(${index})" class="text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-colors" title="Remover">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                `;
+                listEl.appendChild(li);
+            });
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // --- LÓGICA DE IMPRESSÃO ---
+        function executePrint() {
+            try {
+                const clientName = document.getElementById('clientName').value || 'NÃO INFORMADO';
+                document.getElementById('print-client').innerText = clientName;
+                document.getElementById('print-process').innerText = document.getElementById('processNumber').value || '-';
+                
+                const now = new Date().toLocaleString('pt-BR');
+                document.getElementById('print-date').innerText = now;
+                document.getElementById('print-footer-date').innerText = now;
+                
+                const moppVal = document.getElementById('mopp-validity').value;
+                const moppContainer = document.getElementById('mopp-date-container');
+                if (moppContainer.classList.contains('hidden')) {
+                    document.getElementById('mopp-validity-display').innerText = "NÃO EXIGIDO";
+                } else {
+                    document.getElementById('mopp-validity-display').innerText = moppVal ? new Date(moppVal).toLocaleDateString('pt-BR') : 'PENDENTE';
+                }
+
+                const btnDispatch = document.getElementById('btn-dispatch');
+                const banner = document.getElementById('print-status-banner');
+                
+                if (!btnDispatch.disabled) {
+                    banner.innerText = "VIAGEM LIBERADA - DOCUMENTAÇÃO CONFERIDA";
+                    banner.style.backgroundColor = "#d1fae5"; 
+                    banner.style.color = "#065f46";
+                    banner.style.borderColor = "#065f46";
+                } else {
+                    banner.innerText = "PENDENTE - DOCUMENTAÇÃO INCOMPLETA";
+                    banner.style.backgroundColor = "#ffe4e6"; 
+                    banner.style.color = "#9f1239";
+                    banner.style.borderColor = "#9f1239";
+                }
+
+                const originalTitle = document.title;
+                document.title = `CHECKLIST_${clientName.replace(/[^a-z0-9]/gi, '_').toUpperCase()}`;
+                
+                window.print();
+                
+                document.title = originalTitle;
+            } catch (e) {
+                showToast("Erro ao tentar imprimir.", "error");
+            }
+        }
+
+        // --- CAPA DE DOCUMENTOS ---
+        function openCoverModal() {
+            const client = document.getElementById('clientName').value || 'NÃO INFORMADO';
+            const process = document.getElementById('processNumber').value || '-';
+            
+            document.getElementById('cover-client').innerText = client;
+            document.getElementById('cover-process').innerText = process;
+            document.getElementById('cover-date').innerText = new Date().toLocaleDateString('pt-BR');
+
+            const setMark = (id, valid) => {
+                document.getElementById(id).innerText = valid ? 'X' : '';
+            };
+
+            setMark('chk-cover-cte', true);
+            setMark('chk-cover-mdfe', true);
+            setMark('chk-cover-nfe', true);
+            setMark('chk-cover-ciot', true);
+
+            document.getElementById('cover-modal').classList.remove('hidden');
+        }
+
+        function closeCoverModal() {
+            document.getElementById('cover-modal').classList.add('hidden');
+        }
+
+        function printCoverOnly() {
+            document.body.classList.add('printing-cover');
+            window.print();
+            setTimeout(() => {
+                document.body.classList.remove('printing-cover');
+            }, 500);
+        }
+
+        // --- OUTRAS FUNÇÕES ---
+        function saveToFile() {
+            const client = document.getElementById('clientName').value || 'SemCliente';
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); 
+            
+            if(!data.checks) {
+                 data.client = client;
+                 data.checks = Array.from(document.querySelectorAll('.track-check')).map(cb => cb.checked);
+            }
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; 
+            a.download = `Checklist_${client.replace(/\s+/g, '_')}.json`; 
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadFromFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    JSON.parse(e.target.result); 
+                    localStorage.setItem(STORAGE_KEY, e.target.result);
+                    loadFromLocal();
+                    showToast("Arquivo carregado com sucesso!");
+                } catch (err) {
+                    showToast("Arquivo inválido ou corrompido", "error");
+                }
+            };
+            reader.readAsText(file);
+            input.value = '';
+        }
+
+        function formatCargoValue(input) {
+            let value = input.value.replace(/\D/g, "");
+            if (!value) { 
+                input.value = ""; 
+                document.getElementById('cargoValue-display').innerText = ""; 
+                return; 
+            }
+            const floatValue = parseFloat(value) / 100;
+            const formatted = floatValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            input.value = formatted;
+            document.getElementById('cargoValue-display').innerText = formatted;
+        }
+
+        function updateDate() {
+        }
+
+        function initChart() {
+            const canvas = document.getElementById('progressChart');
+            if (!canvas) return;
+            
+            if (progressChartInstance) {
+                progressChartInstance.destroy();
+            }
+
+            const ctx = canvas.getContext('2d');
+            progressChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Concluído', 'Pendente'],
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['#4f46e5', '#e2e8f0'],
+                        borderWidth: 0,
+                        borderRadius: 20,
+                        cutout: '85%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    animation: { duration: 800, easing: 'easeOutQuart' }
+                }
+            });
+        }
+
+        function updateProgress() {
+            const allChecks = document.querySelectorAll('.track-check');
+            const checkedCount = Array.from(allChecks).filter(c => c.checked).length;
+            const total = allChecks.length;
+            const percentage = total === 0 ? 0 : Math.round((checkedCount / total) * 100);
+
+            if(progressChartInstance) {
+                progressChartInstance.data.datasets[0].data = [percentage, 100 - percentage];
+                progressChartInstance.update();
+            }
+            
+            document.getElementById('progress-text').innerText = `${percentage}%`;
+            ['driver', 'finance', 'docs', 'kit'].forEach(updateSectionStatus);
+            checkFinalReadiness(percentage);
+        }
+
+        function updateSectionStatus(category) {
+            const checks = document.querySelectorAll(`.track-check[data-category="${category}"]`);
+            if(checks.length === 0) return;
+
+            const checked = Array.from(checks).filter(c => c.checked).length;
+            const badge = document.getElementById(`status-${category}`);
+            const dot = document.getElementById(`dot-${category}`);
+            
+            if (checked === checks.length) {
+                badge.innerText = "OK"; 
+                badge.className = "text-[9px] font-black px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 uppercase border border-emerald-200";
+                dot.className = "w-2 h-2 rounded-full bg-emerald-500 shadow-sm";
+            } else {
+                badge.innerText = "PENDENTE"; 
+                badge.className = "text-[9px] font-black px-3 py-1 rounded-full bg-slate-100 text-slate-400 uppercase border border-slate-200";
+                dot.className = "w-2 h-2 rounded-full bg-slate-300";
+            }
+        }
+
+        function setupListeners() {
+            document.querySelectorAll('.track-check').forEach(box => {
+                box.addEventListener('change', () => { updateProgress(); saveToLocal(); });
+            });
+            const textInputs = ['clientName', 'processNumber', 'cargoValue', 'mopp-validity'];
+            textInputs.forEach(id => {
+                const input = document.getElementById(id);
+                if(input) {
+                    input.addEventListener('input', (e) => { 
+                        if(id === 'cargoValue') formatCargoValue(e.target); 
+                        saveToLocal(); 
+                    });
+                }
+            });
+        }
+
+        function showToast(msg, type = "success") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let colors = "bg-emerald-600";
+            let icon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            
+            if (type === "info") { 
+                colors = "bg-slate-800"; 
+                icon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+            if (type === "error") { 
+                colors = "bg-rose-600"; 
+                icon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+
+            toast.className = `${colors} text-white text-[11px] font-bold px-4 py-3 rounded-lg shadow-xl transform transition-all duration-300 translate-x-full opacity-0 flex items-center gap-3 uppercase tracking-wider border border-white/10 backdrop-blur-sm`;
+            toast.innerHTML = `${icon} <span>${msg}</span>`;
+            
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            });
+
+            setTimeout(() => { 
+                toast.classList.add('translate-x-full', 'opacity-0'); 
+                setTimeout(() => toast.remove(), 300); 
+            }, 3500);
+        }
+
+        function toggleSection(id) {
+            const el = document.getElementById(id);
+            const icon = document.getElementById(`icon-${id}`);
+            const isHidden = el.classList.contains('hidden');
+            
+            if (isHidden) {
+                el.classList.remove('hidden');
+                if(icon) icon.innerHTML = '<svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>';
+            } else {
+                el.classList.add('hidden');
+                if(icon) icon.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>';
+            }
+        }
+
+        function toggleMopp(required) {
+            const container = document.getElementById('mopp-date-container');
+            const yesBtn = document.getElementById('mopp-yes');
+            const noBtn = document.getElementById('mopp-no');
+            
+            if (required) {
+                container.classList.remove('hidden');
+                yesBtn.className = "px-5 py-1.5 text-xs font-black rounded-lg bg-indigo-600 text-white shadow-md transition-all";
+                noBtn.className = "px-5 py-1.5 text-xs font-bold rounded-lg text-slate-400 hover:text-slate-600 transition-all";
+            } else {
+                container.classList.add('hidden');
+                noBtn.className = "px-5 py-1.5 text-xs font-black rounded-lg bg-slate-200 text-slate-600 shadow-inner transition-all";
+                yesBtn.className = "px-5 py-1.5 text-xs font-bold rounded-lg text-slate-400 hover:text-slate-600 transition-all";
+                document.getElementById('mopp-validity').value = '';
+            }
+            saveToLocal();
+        }
+
+        function highlightStep(checkbox) {
+            const bullet = checkbox.closest('.relative').querySelector('.doc-bullet');
+            if(!bullet) return;
+            
+            if (checkbox.checked) {
+                bullet.classList.add('bg-indigo-600', 'border-indigo-600');
+                bullet.classList.remove('bg-white', 'border-slate-200');
+            } else {
+                bullet.classList.remove('bg-indigo-600', 'border-indigo-600');
+                bullet.classList.add('bg-white', 'border-slate-200');
+            }
+        }
+
+        function checkCritical(type) {
+            if (type === 'tox') {
+                const isChecked = document.getElementById('check-tox').checked;
+                const cont = document.getElementById('tox-container');
+                if(isChecked) {
+                    cont.classList.add('bg-emerald-50', 'border-emerald-200');
+                    cont.classList.remove('bg-rose-50', 'border-rose-100');
+                } else {
+                    cont.classList.add('bg-rose-50', 'border-rose-100');
+                    cont.classList.remove('bg-emerald-50', 'border-emerald-200');
+                }
+            }
+        }
+
+        function updateRiskStatus(checkbox) { 
+            if (checkbox.checked) showToast("GR validado com seguradora", "info"); 
+        }
+
+        function checkFinalReadiness(percentage) {
+            const btn = document.getElementById('btn-dispatch');
+            const toxCheck = document.getElementById('check-tox').checked;
+            const insCheck = document.getElementById('check-insurance').checked;
+            
+            if (percentage === 100 && toxCheck && insCheck) {
+                btn.disabled = false;
+                btn.className = "w-full py-5 rounded-2xl font-black text-sm text-white bg-emerald-600 hover:bg-emerald-700 shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1 uppercase tracking-[0.2em] border-b-4 border-emerald-800 btn-ready flex items-center justify-center gap-3";
+                btn.innerHTML = `<span>Liberar Viagem</span> <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            } else {
+                btn.disabled = true;
+                btn.className = "w-full py-5 rounded-2xl font-black text-sm text-slate-400 bg-slate-100 cursor-not-allowed transition-all uppercase tracking-widest border-b-4 border-slate-200 flex items-center justify-center gap-2";
+                btn.innerHTML = `<span>Aguardando Validação...</span>`;
+            }
+        }
+    </script>
+</body>
+</html>
