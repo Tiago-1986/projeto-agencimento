@@ -82,7 +82,7 @@
         @media print {
             .no-print { display: none !important; }
             
-            /* CORREÇÃO PRINCIPAL: Remove Flexbox que causa quebra de página */
+            /* Layout Base de Impressão */
             body, main, .flex-col { 
                 display: block !important; 
                 height: auto !important;
@@ -95,24 +95,23 @@
                 overflow: visible !important;
             }
             
-            /* Layout de Grid para Impressão */
+            /* Removemos o 'display: block' global das grids para permitir nosso ajuste manual no cabeçalho */
             .lg\:col-span-2 { width: 100% !important; display: block !important; }
-            .grid { display: block !important; }
             
-            /* Ajuste de margens do cabeçalho para caber mais coisa na pág 1 */
+            /* Ajuste de margens do cabeçalho */
             #print-header { 
                 display: block !important; 
-                padding: 20px 30px 10px 30px !important;
-                margin-bottom: 10px !important;
+                padding: 15px 30px 5px 30px !important; /* Margens reduzidas */
+                margin-bottom: 5px !important;
             }
 
-            /* Configuração dos blocos para não quebrar feio, mas permitir fluxo */
+            /* Configuração dos blocos */
             section, .card-shadow, .checklist-group { 
                 page-break-inside: avoid; 
                 break-inside: avoid;
                 border: 1px solid #ccc !important;
                 box-shadow: none !important;
-                margin-bottom: 15px !important;
+                margin-bottom: 10px !important; /* Espaçamento menor entre blocos */
                 display: block !important;
             }
 
@@ -121,7 +120,7 @@
             .flex-grow { padding: 0 !important; margin: 0 !important; }
             main { padding-top: 0 !important; }
             
-            #print-footer { display: block !important; margin-top: 40px; page-break-inside: avoid; }
+            #print-footer { display: block !important; margin-top: 30px; page-break-inside: avoid; }
             .print-only { display: block !important; }
             
             /* TRUQUE: Substitui Checkbox por texto */
@@ -149,17 +148,17 @@
             #cargoValue-display { display: inline !important; font-weight: bold; color: black; }
             #mopp-validity-display { display: inline !important; font-weight: bold; color: black; }
             
-            /* Status Banner na impressão (Força cor) */
+            /* Status Banner na impressão */
             #print-status-banner, .doc-bullet, #status-driver, #status-finance, #status-docs, #status-kit {
                 display: block !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 border: 2px solid black;
-                padding: 10px;
+                padding: 5px; /* Reduzido padding */
                 text-align: center;
                 font-weight: bold;
-                font-size: 14px;
-                margin-bottom: 20px;
+                font-size: 12px;
+                margin-bottom: 10px;
             }
         }
 
@@ -174,30 +173,30 @@
     <input type="file" id="fileInput" class="hidden" accept=".json" onchange="loadFromFile(this)">
 
     <div id="print-header" class="p-8 pb-4">
-        <div class="flex justify-between items-center border-b-2 border-slate-900 pb-4 mb-4">
+        <div class="flex justify-between items-center border-b-2 border-slate-900 pb-2 mb-2">
             <div class="flex items-center gap-4">
-                <img src="logo.png" alt="Zuplo Log" class="h-16 w-auto object-contain">
+                <img src="logo.png" alt="Zuplo Log" class="h-12 w-auto object-contain">
                 <div>
-                    <h1 class="text-xl font-black uppercase">Relatório de Liberação</h1>
-                    <p class="text-xs font-bold text-slate-500 uppercase">Checklist Operacional de Segurança</p>
+                    <h1 class="text-lg font-black uppercase leading-none">Relatório de Liberação</h1>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase">Checklist Operacional de Segurança</p>
                 </div>
             </div>
             <div class="text-right">
-                <p class="text-xs font-bold uppercase text-slate-400">Data de Emissão</p>
-                <p id="print-date" class="text-sm font-black underline"></p>
+                <p class="text-[10px] font-bold uppercase text-slate-400">Data de Emissão</p>
+                <p id="print-date" class="text-xs font-black underline"></p>
             </div>
         </div>
         
         <div id="print-status-banner">STATUS INDEFINIDO</div>
 
-        <div class="grid grid-cols-2 gap-4 mt-4 mb-6">
-            <div class="border p-3 rounded">
-                <p class="text-[10px] font-black uppercase text-slate-400">Cliente</p>
-                <p id="print-client" class="text-sm font-bold uppercase">-</p>
+        <div style="display: flex !important; gap: 10px; margin-bottom: 10px; margin-top: 5px;" class="flex gap-2 mt-2 mb-2">
+            <div class="border p-1.5 rounded flex-1" style="flex: 1;">
+                <p class="text-[9px] font-black uppercase text-slate-400 leading-none">Cliente</p>
+                <p id="print-client" class="text-xs font-bold uppercase leading-tight truncate">-</p>
             </div>
-            <div class="border p-3 rounded">
-                <p class="text-[10px] font-black uppercase text-slate-400">Nº do Processo</p>
-                <p id="print-process" class="text-sm font-bold uppercase">-</p>
+            <div class="border p-1.5 rounded flex-1" style="flex: 1;">
+                <p class="text-[9px] font-black uppercase text-slate-400 leading-none">Nº do Processo</p>
+                <p id="print-process" class="text-xs font-bold uppercase leading-tight truncate">-</p>
             </div>
         </div>
     </div>
