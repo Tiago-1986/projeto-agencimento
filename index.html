@@ -592,9 +592,18 @@
                 checks: Array.from(document.querySelectorAll('.track-check')).map(cb => cb.checked),
                 isToxValid: document.getElementById('check-tox').checked,
                 isInsured: document.getElementById('check-insurance').checked,
-                attachedFiles: attachedFiles // SALVA A LISTA DE ARQUIVOS
+                attachedFiles: attachedFiles 
             };
-            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (e) { console.error("Erro ao salvar", e); }
+            try { 
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); 
+            } catch (e) { 
+                // Se der erro de cota (arquivo muito grande), avisamos o usuário
+                if (e.name === 'QuotaExceededError' || e.code === 22) {
+                    console.warn("Limite de Autosalvar excedido (anexos grandes). Use o botão SALVAR para garantir.");
+                } else {
+                    console.error("Erro ao salvar", e); 
+                }
+            }
         }, 800);
 
         function loadFromLocal() {
@@ -656,18 +665,35 @@
             const files = Array.from(input.files);
             if (files.length === 0) return;
 
-            files.forEach(file => {
-                const fileObj = {
-                    name: file.name,
-                    size: formatFileSize(file.size),
-                    type: file.name.split('.').pop().toLowerCase(),
-                    date: new Date().toLocaleDateString('pt-BR')
-                };
-                attachedFiles.push(fileObj);
-            });
+            let processedCount = 0;
 
-            renderFileList();
-            saveToLocal();
+            files.forEach(file => {
+                // Aviso simples se o arquivo for gigante (maior que 4MB)
+                if (file.size > 4 * 1024 * 1024) {
+                    showToast(`Arquivo ${file.name} muito grande! Recomendado max 4MB.`, "error");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const fileObj = {
+                        name: file.name,
+                        size: formatFileSize(file.size),
+                        type: file.name.split('.').pop().toLowerCase(),
+                        date: new Date().toLocaleDateString('pt-BR'),
+                        content: e.target.result // <--- AQUI O ARQUIVO É SALVO NO JSON
+                    };
+                    attachedFiles.push(fileObj);
+                    processedCount++;
+
+                    // Só atualiza a tela quando terminar de ler todos
+                    if (processedCount === files.length) {
+                        renderFileList();
+                        saveToLocal();
+                    }
+                };
+                reader.readAsDataURL(file); // Converte arquivo para texto Base64
+            });
             input.value = '';
         }
 
@@ -697,8 +723,12 @@
                     iconColor = "text-rose-500";
                 }
 
+                // Verifica se tem conteúdo para criar link de download
+                const downloadAttr = file.content ? `href="${file.content}" download="${file.name}"` : '';
+                const cursorClass = file.content ? 'cursor-pointer hover:bg-slate-100' : '';
+
                 li.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden">
+                    <a ${downloadAttr} class="flex items-center gap-3 overflow-hidden flex-grow ${cursorClass} p-1 rounded-lg transition-colors" title="Clique para baixar/visualizar">
                         <div class="${iconColor} bg-slate-50 p-2 rounded-lg">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${iconSvg}</svg>
                         </div>
@@ -706,7 +736,7 @@
                             <span class="text-xs font-bold text-slate-700 truncate">${file.name}</span>
                             <span class="text-[10px] text-slate-400">${file.size} • ${file.date}</span>
                         </div>
-                    </div>
+                    </a>
                     <button onclick="removeFile(${index})" class="text-slate-400 hover:text-rose-600 p-2 rounded-lg hover:bg-rose-50 transition-colors" title="Remover">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
@@ -774,30 +804,35 @@
             const clientInput = document.getElementById('clientName').value;
             const processInput = document.getElementById('processNumber').value;
 
-            // 2. Trata os valores (se estiver vazio, coloca um texto padrão)
+            // 2. Trata os valores para evitar erros no nome do arquivo
+            // Se estiver vazio, usa um padrão. Remove espaços extras.
             const client = clientInput ? clientInput.trim() : 'SemCliente';
             const process = processInput ? processInput.trim() : 'SemProcesso';
 
-            // 3. Pega os dados atuais
+            // 3. Prepara os dados para salvar
             const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
             
-            // Garante que os dados do form atual entrem no arquivo mesmo se não houve alteração recente
+            // Atualiza com os valores atuais dos campos antes de salvar
             data.client = clientInput;
             data.process = processInput;
+            // IMPORTANTE: Adiciona os arquivos atuais (que já estão em Base64 na memória)
+            data.attachedFiles = attachedFiles;
+            
+            // Se não houver checks salvos ainda, pega o estado atual
             if(!data.checks) {
                  data.checks = Array.from(document.querySelectorAll('.track-check')).map(cb => cb.checked);
             }
 
-            // 4. Cria o arquivo
+            // 4. Cria o arquivo virtual
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url; 
 
-            // 5. DEFINE O NOME DO ARQUIVO (Aqui está a mudança)
-            // Substitui espaços por underline para não quebrar o link
-            const safeClient = client.replace(/\s+/g, '_');
-            const safeProcess = process.replace(/\s+/g, '_');
+            // 5. GERA O NOME DO ARQUIVO (Cliente + Processo)
+            // Regex: substitui espaços por underline (_) para garantir compatibilidade
+            const safeClient = client.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+            const safeProcess = process.replace(/[^a-zA-Z0-9]/g, '_');
             
             a.download = `${safeClient}_Proc-${safeProcess}.json`; 
             
@@ -811,8 +846,9 @@
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
-                    JSON.parse(e.target.result); 
-                    localStorage.setItem(STORAGE_KEY, e.target.result);
+                    const fileContent = e.target.result;
+                    JSON.parse(fileContent); // Teste se é JSON válido
+                    localStorage.setItem(STORAGE_KEY, fileContent);
                     loadFromLocal();
                     showToast("Arquivo carregado com sucesso!");
                 } catch (err) {
