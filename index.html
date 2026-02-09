@@ -82,25 +82,38 @@
         @media print {
             .no-print { display: none !important; }
             
-            body { 
+            /* CORREÇÃO PRINCIPAL: Remove Flexbox que causa quebra de página */
+            body, main, .flex-col { 
+                display: block !important; 
+                height: auto !important;
+                min-height: 0 !important;
                 background: white; 
                 padding: 0; 
                 margin: 0; 
                 font-size: 11px; 
                 color: black !important;
+                overflow: visible !important;
             }
             
             /* Layout de Grid para Impressão */
             .lg\:col-span-2 { width: 100% !important; display: block !important; }
             .grid { display: block !important; }
             
-            /* Evita quebrar blocos ao meio */
+            /* Ajuste de margens do cabeçalho para caber mais coisa na pág 1 */
+            #print-header { 
+                display: block !important; 
+                padding: 20px 30px 10px 30px !important;
+                margin-bottom: 10px !important;
+            }
+
+            /* Configuração dos blocos para não quebrar feio, mas permitir fluxo */
             section, .card-shadow, .checklist-group { 
                 page-break-inside: avoid; 
                 break-inside: avoid;
                 border: 1px solid #ccc !important;
                 box-shadow: none !important;
                 margin-bottom: 15px !important;
+                display: block !important;
             }
 
             /* Cabeçalho e Rodapé de Impressão */
@@ -108,7 +121,6 @@
             .flex-grow { padding: 0 !important; margin: 0 !important; }
             main { padding-top: 0 !important; }
             
-            #print-header { display: block !important; }
             #print-footer { display: block !important; margin-top: 40px; page-break-inside: avoid; }
             .print-only { display: block !important; }
             
