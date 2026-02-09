@@ -251,6 +251,22 @@
                         </span>
                     </div>
                     <div id="sec-driver" class="p-6 space-y-6">
+                        
+                        <div class="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg shadow-sm">
+                            <div class="flex">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <p class="text-sm text-amber-800">
+                                        <strong class="font-bold">Atenção:</strong> Validação dos documentos básicos e requisitos legais. 
+                                        O <span class="font-black underline">Exame Toxicológico</span> é o ponto crítico.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                         <div class="space-y-4">
                             <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest">Condutor</h4>
                             <label class="flex items-start gap-4 checklist-item p-3 rounded-xl hover:bg-slate-50/50 cursor-pointer">
@@ -270,7 +286,7 @@
                                     <input type="checkbox" id="check-tox" class="mt-1 track-check" data-category="driver" onchange="checkCritical('tox')">
                                     <div>
                                         <span class="text-sm font-black text-rose-700 uppercase tracking-tight">Exame Toxicológico (Crítico)</span>
-                                        <p class="text-xs text-rose-600 font-medium mt-0.5 text-opacity-80">Deve estar VÁLIDO no app CDT/Renach. Vencimento periódico < 30 dias.
+                                        <p class="text-xs text-rose-600 font-medium mt-0.5 text-opacity-80">Deve estar VÁLIDO no app CDT/Renach. Vencimento periódico < 30 dias.</p>
                                     </div>
                                 </label>
                             </div>
@@ -344,14 +360,14 @@
                                     <input type="checkbox" id="check-risk" class="mt-1 track-check" data-category="finance" onchange="updateRiskStatus(this)">
                                     <div>
                                         <span class="text-sm font-bold text-indigo-900">Consulta Buonny/Pamcary</span>
-                                        <p class="text-xs text-slate-400 mt-0.5 font-medium">Motorista e Veículo LIBERADO.
+                                        <p class="text-xs text-slate-400 mt-0.5 font-medium">Motorista e Veículo LIBERADO.</p>
                                     </div>
                                 </label>
                                 <label class="flex items-start gap-3 checklist-item p-3 border border-indigo-50 bg-indigo-50/30 rounded-xl cursor-pointer">
                                     <input type="checkbox" class="mt-1 track-check" data-category="finance">
                                     <div>
                                         <span class="text-sm font-bold text-indigo-900">Checklist Físico Realizado</span>
-                                        <p class="text-xs text-slate-400 mt-0.5 font-medium">Pneus, EPIs, condições do baú.
+                                        <p class="text-xs text-slate-400 mt-0.5 font-medium">Pneus, EPIs, condições do baú.</p>
                                     </div>
                                 </label>
                             </div>
@@ -754,19 +770,37 @@
 
         // --- OUTRAS FUNÇÕES ---
         function saveToFile() {
-            const client = document.getElementById('clientName').value || 'SemCliente';
-            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); 
+            // 1. Pega os valores dos inputs
+            const clientInput = document.getElementById('clientName').value;
+            const processInput = document.getElementById('processNumber').value;
+
+            // 2. Trata os valores (se estiver vazio, coloca um texto padrão)
+            const client = clientInput ? clientInput.trim() : 'SemCliente';
+            const process = processInput ? processInput.trim() : 'SemProcesso';
+
+            // 3. Pega os dados atuais
+            const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
             
+            // Garante que os dados do form atual entrem no arquivo mesmo se não houve alteração recente
+            data.client = clientInput;
+            data.process = processInput;
             if(!data.checks) {
-                 data.client = client;
                  data.checks = Array.from(document.querySelectorAll('.track-check')).map(cb => cb.checked);
             }
 
+            // 4. Cria o arquivo
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url; 
-            a.download = `Checklist_${client.replace(/\s+/g, '_')}.json`; 
+
+            // 5. DEFINE O NOME DO ARQUIVO (Aqui está a mudança)
+            // Substitui espaços por underline para não quebrar o link
+            const safeClient = client.replace(/\s+/g, '_');
+            const safeProcess = process.replace(/\s+/g, '_');
+            
+            a.download = `${safeClient}_Proc-${safeProcess}.json`; 
+            
             a.click();
             URL.revokeObjectURL(url);
         }
